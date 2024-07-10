@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Folder and Excel Uploader</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .form-group input[type="file"] {
+            display: block;
+            margin-top: 5px;
+        }
+        .form-group button {
+            margin-top: 10px;
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: block;
+            width: 100%;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .output {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        .progress-container {
+            display: none;
+            width: 100%;
+            background-color: #f3f3f3;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .progress-bar {
+            height: 24px;
+            background-color: #4CAF50;
+            width: 0%;
+            text-align: center;
+            line-height: 24px;
+            color: white;
+            border-radius: 5px;
+            transition: width 0.4s ease;
+        }
+        #statusMessage.error {
+            color: red;
+        }
+        #statusMessage.success {
+            color: green;
+        }
+        #excelLink a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+        #excelLink a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Folder and Excel Uploader</h2>
+    <form id="uploadForm" action="/process-files" method="post" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="folderUpload">Upload Folder:</label>
+            <input type="file" id="folderUpload" name="folderUpload" webkitdirectory directory multiple required>
+        </div>
+        <div class="form-group">
+            <label for="excelFile">Upload Excel File:</label>
+            <input type="file" id="excelFile" name="excelFile" required>
+        </div>
+        <div class="form-group">
+            <button type="submit">Process Files</button>
+        </div>
+    </form>
+    <div class="output" id="output">
+        <p id="statusMessage"></p>
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar">0%</div>
+        </div>
+        <p id="excelLink"></p>
+    </div>
+</div>
+
+<script>
+    document.querySelector('form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const output = document.getElementById('output');
+        const progressBar = document.getElementById('progressBar');
+        const progressContainer = document.querySelector('.progress-container');
+        const statusMessage = document.getElementById('statusMessage');
+        const excelLink = document.getElementById('excelLink');
+
+        // Show the output and progress container immediately
+        output.style.display = 'block';
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressBar.innerText = '0%';
+        statusMessage.className = '';
+        statusMessage.innerText = '';
+        excelLink.innerHTML = '';
+
+        let formData = new FormData(this);
+        let xhr = new XMLHttpRequest();
+        xhr.open('POST', '/process-files');
+
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                let response = JSON.parse(xhr.responseText);
+                statusMessage.className = 'success';
+                statusMessage.innerText = response.message;
+                excelLink.innerHTML = `<a href="${response.excel_path}" target="_blank">Download Excel file</a>`;
+            } else {
+                let response = JSON.parse(xhr.responseText);
+                statusMessage.className = 'error';
+                statusMessage.innerText = response.message;
+            }
+            progressContainer.style.display = 'none';
+            progressBar.style.width = '0%';
+            progressBar.innerText = '0%';
+        };
+        xhr.send(formData);
+
+        const eventSource = new EventSource('/progress');
+        eventSource.onmessage = function(event) {
+            const progress = event.data;
+            progressBar.style.width = progress + '%';
+            progressBar.innerText = progress + '%';
+            if (progress == 100) {
+                eventSource.close();
+            }
+        };
+    });
+</script>
+
+</body>
+</html>

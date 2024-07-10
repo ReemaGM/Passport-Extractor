@@ -1,0 +1,5 @@
+Flask==2.1.1
+werkzeug==2.1.1
+openpyxl==3.0.9
+mindee==4.9.0
+mrz==0.6.2
